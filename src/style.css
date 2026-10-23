@@ -1258,3 +1258,31 @@ h2,
 h3 {
   overflow-wrap: anywhere;
 }
+
+.daily-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 24px 0;
+  background: #241d27;
+  border-color: #513246;
+}
+.daily-message .icon-tile {
+  flex-shrink: 0;
+}
+.daily-message h3 {
+  font-size: 15px;
+  margin-bottom: 7px;
+}
+.daily-message p {
+  font-size: 13px;
+}
+.notification-settings {
+  margin: 24px 0;
+}
+.notification-settings h2 {
+  font-size: 20px;
+}
+.wrap {
+  flex-wrap: wrap;
+}

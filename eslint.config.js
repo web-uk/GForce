@@ -10,6 +10,12 @@ export default tseslint.config(
       "test-results/**",
     ],
   },
+  {
+    files: ["public/**/*.js"],
+    languageOptions: {
+      globals: { ...globals.worker, ...globals.serviceworker },
+    },
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

@@ -14,14 +14,7 @@ import {
   Utensils,
   WifiOff,
 } from "lucide-react";
-import {
-  access,
-  verify,
-  setPassword,
-  remember,
-  eachOpening,
-  removeAccess,
-} from "./lib/auth";
+import { access, verify, unlock, remember, removeAccess } from "./lib/auth";
 import { readData, writeData, clearData } from "./lib/storage";
 import {
   addDays,
@@ -46,6 +39,14 @@ import {
 import { ProfileForm } from "./components/ProfileForm";
 import { ExerciseDetail } from "./components/ExerciseDetail";
 import { Workout } from "./components/Workout";
+import { DailyMessage } from "./components/DailyMessage";
+import { afterSessionMessage } from "./content/messages";
+import { Notifications } from "./components/Notifications";
+import {
+  localNotification,
+  stopNotifications,
+  forgetReminderPreferences,
+} from "./lib/notifications";
 const nav = [
   { id: "hoje", label: "Hoje", icon: House },
   { id: "semana", label: "Minha semana", icon: CalendarDays },
@@ -64,7 +65,6 @@ function Gate({
   onReset: () => void;
 }) {
   const [password, set] = useState("");
-  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   return (
@@ -78,7 +78,7 @@ function Gate({
         <p>
           {configured
             ? "Digite sua senha para acessar os registros deste navegador."
-            : "Crie uma senha pessoal para este navegador. Sem e-mail, sem conta."}
+            : "Digite a senha única de acesso. Depois de entrar, o acesso fica lembrado neste navegador."}
         </p>
         <form
           className="stack"
@@ -86,15 +86,7 @@ function Gate({
             e.preventDefault();
             setBusy(true);
             try {
-              if (configured) {
-                if (!(await verify(password)))
-                  throw new Error("Senha incorreta. Tente novamente.");
-                remember(true);
-              } else {
-                if (password !== confirm)
-                  throw new Error("As senhas não coincidem.");
-                await setPassword(password);
-              }
+              await unlock(password);
               onOpen();
             } catch (err) {
               setError((err as Error).message);
@@ -106,44 +98,27 @@ function Gate({
           <label>
             Senha
             <input
-              autoComplete={configured ? "current-password" : "new-password"}
+              autoComplete="current-password"
               type="password"
-              minLength={8}
+              minLength={1}
               required
               value={password}
               onChange={(e) => set(e.target.value)}
             />
           </label>
-          {!configured && (
-            <label>
-              Confirme a senha
-              <input
-                autoComplete="new-password"
-                type="password"
-                minLength={8}
-                required
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-              />
-            </label>
-          )}
           {error && (
             <p role="alert" className="notice">
               {error}
             </p>
           )}
           <button className="primary" disabled={busy}>
-            {busy
-              ? "Verificando…"
-              : configured
-                ? "Desbloquear"
-                : "Criar senha e começar"}
+            {busy ? "Verificando…" : configured ? "Desbloquear" : "Entrar"}
             <ChevronRight size={18} />
           </button>
         </form>
         {configured && (
           <button className="text-button" onClick={onReset}>
-            Esqueci a senha · reinicializar
+            Reinicializar dados deste navegador
           </button>
         )}
         <small>
@@ -173,9 +148,6 @@ export default function App() {
   const [short, setShort] = useState(false);
   const [readiness, setReadiness] = useState("Disposta");
   const [imported, setImported] = useState<Data | null>(null);
-  const [oldPass, setOldPass] = useState("");
-  const [newPass, setNewPass] = useState("");
-  const [passConfirm, setPassConfirm] = useState("");
   const [reset, setReset] = useState(false);
   const [resetText, setResetText] = useState("");
   const [resetPassword, setResetPassword] = useState("");
@@ -209,7 +181,7 @@ export default function App() {
     try {
       const a = access();
       setConfigured(!!a);
-      setOpen(!!a && a.remember && !a.each);
+      setOpen(!!a && a.remember);
     } catch {
       setError(
         "Falha ao ler o controle de acesso. Permita armazenamento local ou reinicialize conscientemente.",
@@ -320,6 +292,8 @@ export default function App() {
       return;
     }
     try {
+      await stopNotifications();
+      forgetReminderPreferences();
       await clearData();
       removeAccess();
       setData(structuredClone(initialData));
@@ -570,6 +544,7 @@ export default function App() {
               </button>
             </div>
           )}
+          {!data.active && route !== "configuracoes" && <Notifications />}
           {!data.profile || editProfile ? (
             <section className="panel profile">
               <ProfileForm
@@ -619,6 +594,7 @@ export default function App() {
                       semanas
                     </span>
                   </div>
+                  <DailyMessage data={data} />
                   <div className="dashboard-grid">
                     <section className="hero">
                       <div className="hero-top">
@@ -1037,11 +1013,12 @@ export default function App() {
                         ),
                       ).then(() => {
                         go("evolucao");
-                        setMessage(
-                          partial
-                            ? "Registro parcial salvo. Não é necessário compensar."
-                            : "Sessão salva. Reserve tempo para recuperar.",
-                        );
+                        setMessage(afterSessionMessage(partial, pain));
+                        void localNotification(
+                          afterSessionMessage(partial, pain),
+                          `gforce-session-${data.active!.id}`,
+                          "evolucao",
+                        ).catch(() => {});
                       });
                     }}
                   />
@@ -1411,6 +1388,7 @@ export default function App() {
                       </h1>
                     </div>
                   </div>
+                  <Notifications settings />
                   <div className="grid two">
                     <section className="panel stack">
                       <h2>Seu perfil</h2>
@@ -1437,73 +1415,18 @@ export default function App() {
                       <button onClick={lock}>
                         <LockKeyhole size={17} /> Bloquear agora
                       </button>
-                      <label className="check">
-                        <input
-                          type="checkbox"
-                          defaultChecked={access()?.each ?? false}
-                          onChange={(e) => eachOpening(e.target.checked)}
-                        />
-                        Exigir senha a cada abertura
-                      </label>
-                      <form
-                        className="stack"
-                        onSubmit={async (e) => {
-                          e.preventDefault();
-                          try {
-                            if (!(await verify(oldPass)))
-                              throw new Error("Senha atual incorreta.");
-                            if (newPass !== passConfirm)
-                              throw new Error("As senhas não coincidem.");
-                            await setPassword(newPass);
-                            setOldPass("");
-                            setNewPass("");
-                            setPassConfirm("");
-                            setMessage("Senha alterada.");
-                          } catch (err) {
-                            setMessage((err as Error).message);
-                          }
-                        }}
-                      >
-                        <label>
-                          Senha atual
-                          <input
-                            autoComplete="current-password"
-                            required
-                            type="password"
-                            value={oldPass}
-                            onChange={(e) => setOldPass(e.target.value)}
-                          />
-                        </label>
-                        <label>
-                          Nova senha
-                          <input
-                            autoComplete="new-password"
-                            required
-                            minLength={8}
-                            type="password"
-                            value={newPass}
-                            onChange={(e) => setNewPass(e.target.value)}
-                          />
-                        </label>
-                        <label>
-                          Confirme a nova senha
-                          <input
-                            autoComplete="new-password"
-                            required
-                            minLength={8}
-                            type="password"
-                            value={passConfirm}
-                            onChange={(e) => setPassConfirm(e.target.value)}
-                          />
-                        </label>
-                        <button>Alterar senha</button>
-                      </form>
+                      <p>
+                        A senha é única. O acesso fica lembrado neste navegador
+                        até você usar “Bloquear agora” ou limpar os dados de
+                        acesso. Os registros existentes são preservados.
+                      </p>
                     </section>
                     <section className="panel stack">
                       <h2>Seus dados, com você</h2>
                       <p>
-                        Não enviamos registros nem coletamos telemetria. Limpar
-                        dados do navegador pode apagar tudo. Faça backups
+                        Seus registros de treino não são enviados. Notificações
+                        usam OneSignal apenas após sua autorização. Limpar dados
+                        do navegador pode apagar tudo. Faça backups
                         regularmente.
                       </p>
                       <p className="notice">
@@ -1620,9 +1543,11 @@ export default function App() {
                         backup para transferir conscientemente.
                       </p>
                       <p>
-                        Não há garantia de áudio ou alarmes com o app fechado.
-                        Se a tela suspender, confirme para retomar. Atualizações
-                        só serão aplicadas com sua ação, fora do treino.
+                        Áudio e alarmes locais não são garantidos com o app
+                        fechado. Lembretes Web Push dependem de autorização e
+                        conexão com o serviço. Se a tela suspender, confirme
+                        para retomar. Atualizações só serão aplicadas com sua
+                        ação, fora do treino.
                       </p>
                     </section>
                     <section className="panel stack">

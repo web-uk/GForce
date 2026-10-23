@@ -1,13 +1,13 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-async function setup(page: Page) {
+const testPassword = process.env.GFORCE_TEST_PASSWORD || "GForce-test-access";
+async function setup(page: Page, keepNotificationPrompt = false) {
   await page.goto("./");
-  await page.getByLabel("Senha", { exact: true }).fill("GForce-teste-2026");
-  await page
-    .getByLabel("Confirme a senha", { exact: true })
-    .fill("GForce-teste-2026");
-  await page.getByRole("button", { name: "Criar senha e começar" }).click();
+  await page.getByLabel("Senha", { exact: true }).fill(testPassword);
+  await page.getByRole("button", { name: "Entrar" }).click();
   await page.getByLabel("Faixa etária").selectOption("18–39");
+  if (!keepNotificationPrompt)
+    await page.getByRole("button", { name: "Agora não", exact: true }).click();
   await page
     .getByRole("combobox", { name: "Experiência", exact: true })
     .selectOption("Iniciante");
@@ -54,7 +54,7 @@ test("senha, persistência, treino parcial, backup e exclusão", async ({
   await page.getByLabel("Senha", { exact: true }).fill("senha-errada");
   await page.getByRole("button", { name: "Desbloquear" }).click();
   await expect(page.getByRole("alert")).toContainText("Senha incorreta");
-  await page.getByLabel("Senha", { exact: true }).fill("GForce-teste-2026");
+  await page.getByLabel("Senha", { exact: true }).fill(testPassword);
   await page.getByRole("button", { name: "Desbloquear" }).click();
   await go(page, "hoje");
   await page
@@ -122,7 +122,7 @@ test("senha, persistência, treino parcial, backup e exclusão", async ({
   await page
     .getByRole("button", { name: "Excluir todos os dados e reinicializar" })
     .click();
-  await page.getByLabel("Senha atual").fill("GForce-teste-2026");
+  await page.getByLabel("Senha atual").fill(testPassword);
   await page.getByLabel("Digite APAGAR").fill("APAGAR");
   await page.getByRole("button", { name: "Apagar definitivamente" }).click();
   await expect(
@@ -252,9 +252,8 @@ test("indicadores de avaliação bloqueiam geração automática", async ({
   page,
 }) => {
   await page.goto("./");
-  await page.getByLabel("Senha", { exact: true }).fill("GForce-teste-2026");
-  await page.getByLabel("Confirme a senha").fill("GForce-teste-2026");
-  await page.getByRole("button", { name: "Criar senha e começar" }).click();
+  await page.getByLabel("Senha", { exact: true }).fill(testPassword);
+  await page.getByRole("button", { name: "Entrar" }).click();
   await page.getByLabel("Faixa etária").selectOption("40–59");
   await page
     .getByRole("combobox", { name: "Experiência", exact: true })
@@ -273,7 +272,7 @@ test("indicadores de avaliação bloqueiam geração automática", async ({
   ).toHaveCount(0);
 });
 
-test("restauração válida, progressão confirmada, redução e senha a cada abertura", async ({
+test("restauração válida, progressão, redução e acesso lembrado", async ({
   page,
 }) => {
   await setup(page);
@@ -327,19 +326,18 @@ test("restauração válida, progressão confirmada, redução e senha a cada ab
     await page.evaluate(() => Reflect.get(window, "injected")),
   ).toBeUndefined();
   await go(page, "configuracoes");
-  await page
-    .getByLabel("Senha atual", { exact: true })
-    .fill("GForce-teste-2026");
-  await page.getByLabel("Nova senha", { exact: true }).fill("Nova-GForce-2026");
-  await page.getByLabel("Confirme a nova senha").fill("Nova-GForce-2026");
-  await page.getByRole("button", { name: "Alterar senha" }).click();
-  await expect(page.getByRole("status")).toContainText("Senha alterada");
-  await page.getByLabel("Exigir senha a cada abertura").check();
+  await expect(
+    page.getByText("A senha é única.", { exact: false }),
+  ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Bem-vinda de volta." }),
+    page.getByRole("heading", { name: "Configurações." }),
   ).toBeVisible();
-  await page.getByLabel("Senha", { exact: true }).fill("Nova-GForce-2026");
+  await page
+    .getByRole("button", { name: "Bloquear agora", exact: true })
+    .last()
+    .click();
+  await page.getByLabel("Senha", { exact: true }).fill(testPassword);
   await page.getByRole("button", { name: "Desbloquear" }).click();
   await expect(
     page.getByRole("heading", { name: "Configurações." }),
@@ -422,7 +420,9 @@ test("timer usa timestamps e não avança etapas ao suspender", async ({
   ).toBeVisible();
 });
 
-test("retomada após pausa mantém repetições reduzidas nas próximas sessões", async ({ page }) => {
+test("retomada após pausa mantém repetições reduzidas nas próximas sessões", async ({
+  page,
+}) => {
   await setup(page);
   await go(page, "configuracoes");
   const data = await getData(page);
@@ -430,31 +430,228 @@ test("retomada após pausa mantém repetições reduzidas nas próximas sessões
   date.setDate(date.getDate() - 20);
   const previousDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   data.reps = 12;
-  data.sessions = [{
-    id: "before-break", planId: "before-break", date: previousDate,
-    kind: "A", started: 1, ended: 2, partial: false, steps: 14,
-    effort: "Moderado", pain: false, readiness: "Disposta",
-    reps: 12, resistance: "Peso corporal", notes: "",
-  }];
+  data.sessions = [
+    {
+      id: "before-break",
+      planId: "before-break",
+      date: previousDate,
+      kind: "A",
+      started: 1,
+      ended: 2,
+      partial: false,
+      steps: 14,
+      effort: "Moderado",
+      pain: false,
+      readiness: "Disposta",
+      reps: 12,
+      resistance: "Peso corporal",
+      notes: "",
+    },
+  ];
   await page.getByLabel("Restaurar backup").setInputFiles({
-    name: "retomada.json", mimeType: "application/json",
+    name: "retomada.json",
+    mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(data)),
   });
   page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "Confirmar substituição" }).click();
-  await expect(page.getByRole("heading", { name: /Vamos juntas/ })).toBeVisible();
-  await page.getByRole("button", { name: "Iniciar treino", exact: true }).click();
-  await expect(page.getByText("Retomada gradual após pausa:", { exact: false })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Vamos juntas/ }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Iniciar treino", exact: true })
+    .click();
+  await expect(
+    page.getByText("Retomada gradual após pausa:", { exact: false }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Confirmar e iniciar" }).click();
-  await expect(page.getByRole("heading", { name: "Prepare seu espaço" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Prepare seu espaço" }),
+  ).toBeVisible();
   const resumed = await getData(page);
   expect(resumed.reps).toBe(5);
   expect((resumed.active as Record<string, unknown>).reps).toBe(5);
   expect((resumed.active as Record<string, unknown>).short).toBe(true);
-  await page.getByRole("button", { name: "Encerrar e registrar parcial" }).click();
+  await page
+    .getByRole("button", { name: "Encerrar e registrar parcial" })
+    .click();
   await page.getByRole("button", { name: "Salvar registro parcial" }).click();
   await expect(page.getByRole("heading", { name: "Evolução." })).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Atual: 5 repetições", { exact: false })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Confirmar +1 repetição" })).toHaveCount(0);
+  await expect(
+    page.getByText("Atual: 5 repetições", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Confirmar +1 repetição" }),
+  ).toHaveCount(0);
+});
+
+test("ativação de avisos é opcional e não pergunta novamente após consentimento", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["notifications"]);
+  await page.addInitScript(() => {
+    Object.defineProperty(Notification, "permission", {
+      configurable: true,
+      get: () =>
+        sessionStorage.getItem("test-notification-permission") || "default",
+    });
+    Notification.requestPermission = async () => {
+      sessionStorage.setItem("test-notification-permission", "granted");
+      sessionStorage.setItem(
+        "test-notification-prompts",
+        String(
+          Number(sessionStorage.getItem("test-notification-prompts") || 0) + 1,
+        ),
+      );
+      Reflect.set(
+        window,
+        "nativePromptHadUserActivation",
+        navigator.userActivation.isActive,
+      );
+      return "granted";
+    };
+    ServiceWorkerRegistration.prototype.showNotification = async function (
+      title,
+      options,
+    ) {
+      Reflect.set(window, "localNotificationTest", {
+        title,
+        body: options?.body,
+      });
+    };
+  });
+  let sdkLoads = 0;
+  await page.route("https://cdn.onesignal.com/**", async (route) => {
+    sdkLoads++;
+    await route.fulfill({
+      contentType: "application/javascript",
+      body: `
+      const sdk = {init:async options=>{window.pushTestOptions=options},setConsentRequired:()=>{},setConsentGiven:()=>{},Notifications:{requestPermission:async()=>{await Notification.requestPermission()},permission:true},User:{addTags:async tags=>{window.pushTestTags=tags},PushSubscription:{id:'synthetic',optedIn:true,optIn:async()=>{},optOut:async()=>{}}}};
+      for(const callback of window.OneSignalDeferred || []) callback(sdk);
+      window.OneSignalDeferred={push:callback=>{callback(sdk);return 1}};
+    `,
+    });
+  });
+  await setup(page, true);
+  await page.screenshot({
+    path: `test-results/notification-invite-${page.viewportSize()?.width}.png`,
+    fullPage: true,
+  });
+  expect(sdkLoads).toBe(0);
+  await page
+    .getByRole("button", { name: "Ativar notificações", exact: true })
+    .click();
+  const confirmation = page.getByRole("button", {
+    name: "Permitir neste aparelho",
+    exact: true,
+  });
+  await expect(
+    confirmation
+      .or(page.getByText("PERMISSÃO SALVA NESTE APARELHO", { exact: true }))
+      .or(page.getByText("WEB PUSH CONECTADO", { exact: true })),
+  ).toBeVisible();
+  if (await confirmation.isVisible()) await confirmation.click();
+  await expect(
+    page
+      .getByText("PERMISSÃO SALVA NESTE APARELHO", { exact: true })
+      .or(page.getByText("WEB PUSH CONECTADO", { exact: true })),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: /Vamos juntas/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Quer receber um lembrete gentil?" }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem("test-notification-prompts"),
+    ),
+  ).toBe("1");
+  const stored = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("gforce-notifications")!),
+  );
+  expect(stored.decision).toBe("enabled");
+  await go(page, "configuracoes");
+  await expect(
+    page.getByRole("heading", { name: "Notificações e carinho no dia" }),
+  ).toBeVisible();
+  await page.getByLabel("Cuidado com alimentação", { exact: true }).uncheck();
+  expect(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem("gforce-notifications")!).food,
+    ),
+  ).toBe(false);
+  const tags = await page.evaluate(() => Reflect.get(window, "pushTestTags"));
+  if (tags) {
+    const options = await page.evaluate(() =>
+      Reflect.get(window, "pushTestOptions"),
+    );
+    expect(options.serviceWorkerPath).toBe("GForce/push/OneSignalSDKWorker.js");
+    expect(options.serviceWorkerParam.scope).toBe("/GForce/push/");
+    expect(options.requiresUserPrivacyConsent).toBe(true);
+    expect(Object.keys(tags).sort()).toEqual([
+      "gforce_care",
+      "gforce_enabled",
+      "gforce_food",
+      "gforce_training",
+    ]);
+  }
+  await page
+    .getByRole("button", { name: "Desativar notificações", exact: true })
+    .click();
+  await expect(
+    page.getByText("Avisos desativados.", { exact: false }),
+  ).toBeVisible();
+  await go(page, "hoje");
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Quer receber um lembrete gentil?" }),
+  ).toHaveCount(0);
+});
+
+test("permissão bloqueada não repete pedido e migração preserva acesso e registros", async ({
+  page,
+}) => {
+  await setup(page, true);
+  await page.evaluate(() =>
+    Object.defineProperty(Notification, "permission", {
+      configurable: true,
+      get: () => "denied",
+    }),
+  );
+  await page
+    .getByRole("button", { name: "Ativar notificações", exact: true })
+    .click();
+  await expect(
+    page.getByText("Os avisos estão bloqueados", { exact: false }),
+  ).toBeVisible();
+  const before = await getData(page);
+  await page.evaluate(() =>
+    localStorage.setItem(
+      "gforce-access",
+      JSON.stringify({
+        salt: [1],
+        hash: [1],
+        iterations: 600000,
+        remember: true,
+        each: true,
+      }),
+    ),
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: /Vamos juntas/ }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Quer receber um lembrete gentil?" }),
+  ).toHaveCount(0);
+  expect((await getData(page)).profile).toEqual(before.profile);
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(localStorage.getItem("gforce-access")!),
+    ),
+  ).toEqual({ version: 2, remember: true });
 });

@@ -1,8 +1,19 @@
 import { defineConfig } from "vite";
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   base: "/GForce/",
+  resolve: {
+    alias:
+      process.env.GFORCE_TEST_BUILD === "1"
+        ? {
+            "./access-verifier.json": fileURLToPath(
+              new URL("./tests/fixtures/access-verifier.json", import.meta.url),
+            ),
+          }
+        : {},
+  },
   plugins: [
     react(),
     VitePWA({
@@ -29,6 +40,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ["local-notifications.js"],
         globPatterns: ["**/*.{js,css,html,png,svg,woff2}"],
         navigateFallback: "index.html",
         cleanupOutdatedCaches: true,

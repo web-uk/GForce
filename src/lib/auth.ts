@@ -1,67 +1,60 @@
 import { z } from "zod";
+import sharedVerifier from "./access-verifier.json";
 const key = "gforce-access";
-const credential = z.object({
+const accessSchema = z.object({ version: z.literal(2), remember: z.boolean() });
+const legacySchema = z.object({
+  remember: z.boolean(),
+  each: z.boolean(),
   salt: z.array(z.number()),
   hash: z.array(z.number()),
   iterations: z.literal(600000),
-  each: z.boolean(),
-  remember: z.boolean(),
 });
 export function access() {
-  const v = localStorage.getItem(key);
-  return v ? credential.parse(JSON.parse(v)) : null;
+  const raw = localStorage.getItem(key);
+  if (!raw) return null;
+  const data: unknown = JSON.parse(raw);
+  const current = accessSchema.safeParse(data);
+  if (current.success) return current.data;
+  const legacy = legacySchema.parse(data);
+  const migrated = { version: 2 as const, remember: legacy.remember };
+  localStorage.setItem(key, JSON.stringify(migrated));
+  return migrated;
 }
-async function derive(password: string, salt: Uint8Array) {
-  const material = await crypto.subtle.importKey(
+export async function verify(password: string) {
+  const keyMaterial = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(password),
     "PBKDF2",
     false,
     ["deriveBits"],
   );
-  return Array.from(
-    new Uint8Array(
-      await crypto.subtle.deriveBits(
-        {
-          name: "PBKDF2",
-          salt: salt as Uint8Array<ArrayBuffer>,
-          iterations: 600000,
-          hash: "SHA-256",
-        },
-        material,
-        256,
-      ),
+  const result = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: new Uint8Array(sharedVerifier.salt),
+        iterations: sharedVerifier.iterations,
+        hash: "SHA-256",
+      },
+      keyMaterial,
+      256,
     ),
   );
-}
-export async function setPassword(password: string) {
-  if (password.length < 8) throw new Error("Use pelo menos 8 caracteres.");
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const previous = access();
-  localStorage.setItem(
-    key,
-    JSON.stringify({
-      salt: Array.from(salt),
-      hash: await derive(password, salt),
-      iterations: 600000,
-      each: previous?.each ?? false,
-      remember: true,
-    }),
+  return (
+    result.reduce(
+      (difference, value, index) =>
+        difference | (value ^ sharedVerifier.hash[index]),
+      0,
+    ) === 0
   );
 }
-export async function verify(password: string) {
-  const a = access();
-  if (!a) return false;
-  const h = await derive(password, new Uint8Array(a.salt));
-  return h.reduce((diff, v, i) => diff | (v ^ a.hash[i]), 0) === 0;
+export async function unlock(password: string) {
+  if (!(await verify(password)))
+    throw new Error("Senha incorreta. Tente novamente.");
+  remember(true);
 }
 export function remember(value: boolean) {
-  const a = access();
-  if (a) localStorage.setItem(key, JSON.stringify({ ...a, remember: value }));
-}
-export function eachOpening(value: boolean) {
-  const a = access();
-  if (a) localStorage.setItem(key, JSON.stringify({ ...a, each: value }));
+  localStorage.setItem(key, JSON.stringify({ version: 2, remember: value }));
 }
 export function removeAccess() {
   localStorage.removeItem(key);

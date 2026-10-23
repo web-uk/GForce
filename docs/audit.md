@@ -43,3 +43,17 @@ A abertura externa no navegador local encontrou erro de confiança da CA do prox
 Na revisão final, a redução de repetições após pausa de pelo menos 14 dias passou a persistir como nível de referência, impedindo retorno automático ao nível anterior na sessão seguinte. Um teste restaura um histórico sintético de 12 repetições, retoma com 5 e confirma que 5 permanece após encerrar e recarregar, sem proposta de aumento após registro parcial.
 
 A ausência de teste físico em iPhone e de revisão clínica permanece. O ambiente local indisponível não afetou o código, os commits nem as evidências já enviados ao repositório.
+
+## Atualização de senha e notificações (23/10/2026)
+
+A senha pessoal foi substituída pela senha única confirmada pela usuária; somente o verificador derivado foi adicionado ao código. A migração preserva a lembrança de acesso e os registros existentes, remove a exigência a cada abertura e mantém bloqueio manual. A senha real usada em testes locais vem do ambiente, sem texto no Git. O CI usa uma fixture de credencial em build exclusivo de teste; em seguida recria e verifica o artifact de produção, rejeitando a presença do verificador de teste.
+
+Implementados convite opcional após login, escolha persistida sem perguntas repetidas, mensagens diárias contextuais e incentivo após registro completo ou parcial. OneSignal usa worker em escopo separado, carrega apenas após consentimento e recebe somente dados técnicos e preferências. O script de envio tem testes para fuso local, temas, não acumular horários perdidos, idempotência, ausência de configuração/destinatários e recusa do provedor.
+
+Lint, tipos, build e **20 testes unitários** passaram localmente nesta atualização. **22 testes de navegador passaram** nos dois tamanhos com build de teste, incluindo SDK/inscrição simulados. **Quatro verificações adicionais passaram no build de produção**, usando a senha real fora do Git: acesso, bloqueio, persistência, backup/exclusão e consentimento de avisos nos dois tamanhos. Fluxos atualizados validam senha única, migração, lembrança de acesso, permissão de avisos simulada, recusa e preferências. O resultado consolidado do navegador e da publicação acompanha o commit entregue em Actions. Permissão e SDK simulados não equivalem à recepção real de um Web Push.
+
+**Dependência externa:** a conta OneSignal, App ID, chave privada e inscrição real não são fornecidos pelo repositório. O token da integração recebeu 403 para secrets e variables de Actions; a usuária foi orientada a adicionar `ONESIGNAL_REST_API_KEY` e `GFORCE_ONESIGNAL_APP_ID`. `GFORCE_TEST_PASSWORD` tornou-se opcional após separar os builds de teste e produção, removendo esse impedimento de publicação. Não se afirma que lembretes diários externos foram entregues antes de uma execução retornar `accepted` e da recepção no aparelho ser confirmada. O app distingue permissão local salva de Web Push conectado.
+
+Não houve teste físico em iPhone. Os horários dependem do provedor, navegador, modo Foco e agenda do GitHub; são convites aproximados, não alarmes garantidos.
+
+O build de produção contém dez entradas de precache e passou pela checagem explícita do verificador real e ausência da fixture. A busca nos arquivos do projeto não encontrou a senha real em texto. Capturas do convite após login foram inspecionadas visualmente em 390 × 844 e 1440 × 900.

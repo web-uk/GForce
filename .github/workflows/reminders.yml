@@ -1,0 +1,33 @@
+name: GForce gentle reminders
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: Tipo de aviso para teste manual (destinado somente a aparelhos que autorizaram)
+        type: choice
+        required: true
+        default: test
+        options: [test, training, food, care]
+permissions:
+  contents: read
+concurrency:
+  group: gforce-reminders
+  cancel-in-progress: false
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enviar apenas no horário e para aparelhos com consentimento
+        run: node scripts/send-reminders.mjs
+        env:
+          ONESIGNAL_APP_ID: ${{ vars.GFORCE_ONESIGNAL_APP_ID }}
+          ONESIGNAL_REST_API_KEY: ${{ secrets.ONESIGNAL_REST_API_KEY }}
+          GFORCE_REMINDER_TIMEZONE: ${{ vars.GFORCE_REMINDER_TIMEZONE || 'America/Sao_Paulo' }}
+          GFORCE_FORCE_KIND: ${{ inputs.kind || '' }}
