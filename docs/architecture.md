@@ -32,3 +32,9 @@ Web Push é uma exceção autorizada nesta atualização à ausência inicial de
 Backups de treino continuam sem senha, preferência de desbloqueio, consentimento de notificações ou inscrição de push: restaurar em outro contexto não ativa notificações silenciosamente.
 
 O build de testes pode substituir o módulo de verificador por fixture via alias do Vite, selecionado somente no processo de build. O workflow refaz depois o artifact de produção e verifica conteúdo dos hashes para impedir publicação da credencial de teste. Sem o secret opcional de senha real, o smoke público valida rejeição de senha incorreta e semeia acesso lembrado para testar funções locais; o relatório identifica explicitamente essa fixture.
+
+## Update focal de acesso e organização dos testes
+
+A tela de acesso foi isolada em `components/Gate.tsx`, com boas-vindas, incentivo e um único campo para a senha já definida. O verificador e a persistência de acesso não foram alterados. `AppUpdate` centraliza a atualização explícita antes e depois do login, com o mesmo bloqueio quando há treino em andamento; registra o listener de `controllerchange` antes de solicitar ativação. O registro do service worker usa `updateViaCache: none` para consultar versões novas sem reutilizar o cache HTTP do script. Não ativa versões nem recarrega treinos automaticamente. Uma instalação que ainda executa o HTML/JavaScript anterior pode precisar ser fechada e recarregada para receber a nova versão; não se apagam caches de dados ou registros para isso.
+
+Os testes de navegador foram separados por área em arquivos independentes, preservando os cenários anteriores. `scripts/test-area.mjs` permite selecionar uma ou mais áreas e evita repetir builds entre elas. Testes de regressão locais podem ficar restritos ao impacto do update; o CI de publicação mantém a validação completa. Não há mudança de esquema, conteúdo de treino ou funcionamento das notificações neste update.

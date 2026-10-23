@@ -14,7 +14,7 @@ import {
   Utensils,
   WifiOff,
 } from "lucide-react";
-import { access, verify, unlock, remember, removeAccess } from "./lib/auth";
+import { access, verify, remember, removeAccess } from "./lib/auth";
 import { readData, writeData, clearData } from "./lib/storage";
 import {
   addDays,
@@ -36,6 +36,8 @@ import {
   strengthSource,
   sittingSource,
 } from "./content/exercises";
+import { Gate } from "./components/Gate";
+import { AppUpdate } from "./components/AppUpdate";
 import { ProfileForm } from "./components/ProfileForm";
 import { ExerciseDetail } from "./components/ExerciseDetail";
 import { Workout } from "./components/Workout";
@@ -55,80 +57,6 @@ const nav = [
   { id: "alimentacao", label: "Alimentação", icon: Utensils },
   { id: "configuracoes", label: "Configurações", icon: Settings },
 ];
-function Gate({
-  configured,
-  onOpen,
-  onReset,
-}: {
-  configured: boolean;
-  onOpen: () => void;
-  onReset: () => void;
-}) {
-  const [password, set] = useState("");
-  const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
-  return (
-    <div className="gate">
-      <div className="wordmark">
-        G<span>Force</span>
-      </div>
-      <section className="panel stack">
-        <span className="eyebrow">SEU ESPAÇO DE MOVIMENTO</span>
-        <h1>{configured ? "Bem-vinda de volta." : "Sua força começa aqui."}</h1>
-        <p>
-          {configured
-            ? "Digite sua senha para acessar os registros deste navegador."
-            : "Digite a senha única de acesso. Depois de entrar, o acesso fica lembrado neste navegador."}
-        </p>
-        <form
-          className="stack"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            setBusy(true);
-            try {
-              await unlock(password);
-              onOpen();
-            } catch (err) {
-              setError((err as Error).message);
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          <label>
-            Senha
-            <input
-              autoComplete="current-password"
-              type="password"
-              minLength={1}
-              required
-              value={password}
-              onChange={(e) => set(e.target.value)}
-            />
-          </label>
-          {error && (
-            <p role="alert" className="notice">
-              {error}
-            </p>
-          )}
-          <button className="primary" disabled={busy}>
-            {busy ? "Verificando…" : configured ? "Desbloquear" : "Entrar"}
-            <ChevronRight size={18} />
-          </button>
-        </form>
-        {configured && (
-          <button className="text-button" onClick={onReset}>
-            Reinicializar dados deste navegador
-          </button>
-        )}
-        <small>
-          Controle de acesso neste aparelho. O site é público e seus registros
-          ficam neste navegador. A senha não criptografa os registros.
-        </small>
-      </section>
-    </div>
-  );
-}
 export default function App() {
   const [data, setData] = useState<Data | null>(null);
   const [open, setOpen] = useState(false);
@@ -354,6 +282,8 @@ export default function App() {
       <>
         <Gate
           configured={configured}
+          update={update}
+          updateBlocked={!data || !!data.active}
           onOpen={() => {
             setOpen(true);
             setConfigured(true);
@@ -524,26 +454,7 @@ export default function App() {
               {message}
             </p>
           )}
-          {update && (
-            <div className="notice row">
-              Atualização disponível. Seus registros serão preservados.
-              <button
-                disabled={!!data.active}
-                onClick={() => {
-                  update.waiting?.postMessage({ type: "SKIP_WAITING" });
-                  navigator.serviceWorker.addEventListener(
-                    "controllerchange",
-                    () => location.reload(),
-                    { once: true },
-                  );
-                }}
-              >
-                {data.active
-                  ? "Conclua o treino para atualizar"
-                  : "Atualizar agora"}
-              </button>
-            </div>
-          )}
+          <AppUpdate registration={update} blocked={!!data.active} />
           {!data.active && route !== "configuracoes" && <Notifications />}
           {!data.profile || editProfile ? (
             <section className="panel profile">

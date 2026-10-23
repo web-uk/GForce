@@ -28,7 +28,7 @@ try {
   expect(response.status()).toBe(200);
   await expect(page).toHaveTitle("GForce · no seu ritmo");
   await expect(
-    page.getByRole("heading", { name: "Sua força começa aqui." }),
+    page.getByRole("heading", { name: "Bem-vinda ao GForce!" }),
   ).toBeVisible();
   await page.screenshot({ path: out + "/primeiro-acesso.png" });
   if (testPassword) {

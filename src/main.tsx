@@ -10,7 +10,7 @@ createRoot(document.getElementById("root")!).render(
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     void navigator.serviceWorker
-      .register("/GForce/sw.js")
+      .register("/GForce/sw.js", { updateViaCache: "none" })
       .then((r) => {
         const notify = () =>
           window.dispatchEvent(new CustomEvent("gforce-update", { detail: r }));

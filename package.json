@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:area": "node scripts/test-area.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.61.0",

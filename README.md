@@ -76,3 +76,17 @@ Após o login, aceite ou recuse o convite uma vez neste navegador. As mensagens 
 - [Auditoria, evidências e limitações](docs/audit.md)
 
 Não coloque dados reais de saúde, backups, fotos pessoais ou segredos neste repositório. O bloqueio é um controle neste aparelho: **não torna o site privado nem criptografa os registros**.
+
+## Verificações por área
+
+Para updates pontuais, execute lint e tipos e selecione somente as áreas alteradas e relacionadas:
+
+```sh
+npm run lint
+npm run typecheck
+npm run test:area -- access pwa
+```
+
+Áreas independentes: `access`, `profile`, `workout`, `calendar`, `progress`, `data`, `library`, `nutrition`, `notifications`, `pwa` e `accessibility`. É possível combinar várias no mesmo comando, compartilhando um único build de teste. O executor seleciona os testes unitários relacionados, roda os respectivos arquivos Playwright nos dois tamanhos e recompõe o build de produção ao final, verificando a ausência da credencial fictícia. Requer Chromium do Playwright instalado; não instala navegadores a cada execução. `npm test` e `npm run test:e2e` continuam disponíveis para a regressão completa de publicação no CI.
+
+Se uma instalação antiga ainda mostrar “Criar senha”, feche e reabra o app com internet e recarregue o endereço no Safari. Não limpe os dados do site. Nas versões atuais, o botão **Atualizar agora** também aparece antes do login quando uma atualização estiver disponível; ele preserva os registros e fica indisponível enquanto houver sessão em andamento.

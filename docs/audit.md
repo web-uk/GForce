@@ -59,3 +59,11 @@ Não houve teste físico em iPhone. Os horários dependem do provedor, navegador
 O build de produção contém dez entradas de precache e passou pela checagem explícita do verificador real e ausência da fixture. A busca nos arquivos do projeto não encontrou a senha real em texto. Capturas do convite após login foram inspecionadas visualmente em 390 × 844 e 1440 × 900.
 
 O instalador de Chromium ficou retido na preparação do runner após o push. O workflow foi ajustado para o Chrome estável pré-instalado na imagem Ubuntu 24.04, mantendo os mesmos testes Playwright e limitando a duração do job. Localmente, continua disponível Chromium baixado por Playwright. A execução substituída foi cancelada pela regra de concorrência; o deploy só ocorre após a nova validação completa.
+
+## Update focal — primeira tela de acesso e suítes por área
+
+- Tela isolada com boas-vindas e incentivo, um campo para a senha já definida e botão Entrar. Não existe criação ou confirmação de nova senha. Senha única, verificador e acesso lembrado preservados.
+- Atualização explícita disponível também antes do login, preservando perfil e bloqueio; permanece desabilitada durante uma sessão ativa. Consulta do script do service worker sem reutilização do cache HTTP. Uma instalação que permaneça aberta na versão anterior pode exigir fechar/reabrir e recarregar com internet, sem limpar dados.
+- Lint e tipos aprovados. Seleção `npm run test:area -- access pwa`: 3 testes unitários de acesso e 10 execuções Chromium aprovadas em 390 × 844 e 1440 × 900, cobrindo senha incorreta, teclado, acesso lembrado, bloqueio manual, atualização no acesso, preservação de perfil, offline e impedimento de atualização no treino. Auditoria axe da tela de acesso sem violações nas regras WCAG selecionadas; sem rolagem horizontal. Capturas reais do navegador inspecionadas. Emulação Chromium, sem teste em iPhone físico.
+- Suíte anterior repartida em acesso, perfil, treino, calendário, evolução, dados, biblioteca, alimentação, notificações, PWA e acessibilidade. Descoberta de 36 execuções em 11 arquivos confirmada, sem remover cenários anteriores; regressão completa permanece no pipeline de publicação.
+- O executor por área reconstrói o build de produção e verifica que o verificador fictício não foi incluído, inclusive após falha nos testes.
