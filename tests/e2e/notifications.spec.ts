@@ -53,6 +53,9 @@ test("ativação de avisos é opcional e não pergunta novamente após consentim
     path: `test-results/notification-invite-${page.viewportSize()?.width}.png`,
     fullPage: true,
   });
+  await expect(
+    page.getByText(/OneSignal|iOS 16.4|fuso|serviço de lembretes/),
+  ).toHaveCount(0);
   expect(sdkLoads).toBe(0);
   await page
     .getByRole("button", { name: "Ativar notificações", exact: true })
@@ -61,17 +64,26 @@ test("ativação de avisos é opcional e não pergunta novamente após consentim
     name: "Permitir neste aparelho",
     exact: true,
   });
-  await expect(
-    confirmation
-      .or(page.getByText("PERMISSÃO SALVA NESTE APARELHO", { exact: true }))
-      .or(page.getByText("WEB PUSH CONECTADO", { exact: true })),
-  ).toBeVisible();
+  const invite = page.getByRole("region", {
+    name: "Convite para notificações",
+  });
+  await expect
+    .poll(
+      async () =>
+        (await confirmation.isVisible()) || (await invite.count()) === 0,
+    )
+    .toBe(true);
   if (await confirmation.isVisible()) await confirmation.click();
+  await expect(invite).toHaveCount(0);
+  await page.screenshot({
+    path: `test-results/notifications-enabled-${page.viewportSize()?.width}.png`,
+    fullPage: true,
+  });
   await expect(
-    page
-      .getByText("PERMISSÃO SALVA NESTE APARELHO", { exact: true })
-      .or(page.getByText("WEB PUSH CONECTADO", { exact: true })),
-  ).toBeVisible();
+    page.getByText(
+      /Suas preferências de avisos|PERMISSÃO SALVA NESTE APARELHO|WEB PUSH CONECTADO|serviço de lembretes/,
+    ),
+  ).toHaveCount(0);
   await page.reload();
   await expect(
     page.getByRole("heading", { name: /Vamos juntas/ }),
@@ -140,8 +152,13 @@ test("permissão bloqueada não repete pedido e migração preserva acesso e reg
     .getByRole("button", { name: "Ativar notificações", exact: true })
     .click();
   await expect(
+    page.getByRole("region", { name: "Convite para notificações" }),
+  ).toHaveCount(0);
+  await go(page, "configuracoes");
+  await expect(
     page.getByText("Os avisos estão bloqueados", { exact: false }),
   ).toBeVisible();
+  await go(page, "hoje");
   const before = await getData(page);
   await page.evaluate(() =>
     localStorage.setItem(

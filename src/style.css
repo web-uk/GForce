@@ -1,4 +1,6 @@
 :root {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   font-family: Inter, Arial, Helvetica, sans-serif;
   color: #f5f4f7;
   background: #101014;
@@ -94,6 +96,7 @@ textarea {
   display: block;
   width: 100%;
   min-width: 0;
+  font-size: 16px;
   background: #111116;
   border: 1px solid #454550;
   color: white;
@@ -1285,4 +1288,18 @@ h3 {
 }
 .wrap {
   flex-wrap: wrap;
+}
+
+/* Campos menores que 16px provocam zoom automático ao focar no Safari/iPhone. */
+@media (max-width: 760px) {
+  input,
+  select,
+  textarea,
+  .calendar-actions input {
+    font-size: 16px;
+  }
+}
+.daily-message > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }

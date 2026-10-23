@@ -115,7 +115,7 @@ export function Notifications({ settings = false }: { settings?: boolean }) {
       setBusy(false);
     }
   }
-  const show = settings || prefs.decision === "pending" || !!status;
+  const show = settings || prefs.decision === "pending";
   if (!show) return null;
   return (
     <section
@@ -129,20 +129,26 @@ export function Notifications({ settings = false }: { settings?: boolean }) {
         <h2>
           {settings
             ? "Notificações e carinho no dia"
-            : prefs.decision === "pending"
-              ? "Quer receber um lembrete gentil?"
-              : "Suas preferências de avisos"}
+            : "Quer receber um lembrete gentil?"}
         </h2>
       </div>
       <p>
         Convites para se movimentar, cuidar da alimentação e reservar tempo para
         você. Você escolhe ativar e pode parar quando quiser.
       </p>
-      <small>
-        Com sua autorização, o OneSignal recebe dados técnicos do navegador,
-        inscrição, entrega e abertura dos avisos. Não enviamos seu nome, perfil,
-        medidas ou histórico. Os registros de treino continuam locais.
-      </small>
+      {settings && (
+        <small>
+          Com sua autorização, o OneSignal recebe dados técnicos do navegador,
+          inscrição, entrega e abertura dos avisos. Não enviamos seu nome,
+          perfil, medidas ou histórico. Os registros de treino continuam locais.
+        </small>
+      )}
+      {settings && permission() === "denied" && (
+        <p className="notice">
+          Os avisos estão bloqueados no navegador. Altere a permissão nos
+          ajustes do aparelho para tentar novamente.
+        </p>
+      )}
       {prefs.decision !== "enabled" ? (
         <div className="row wrap">
           <button
@@ -273,15 +279,21 @@ export function Notifications({ settings = false }: { settings?: boolean }) {
       )}
       {status && (
         <p role="status" className="notice">
-          {status}
+          {settings
+            ? status
+            : ready
+              ? "Confirme a permissão para receber os convites."
+              : "Não foi possível ativar agora. Tente novamente em Configurações."}
         </p>
       )}
-      <small>
-        No iPhone, use o app adicionado à Tela de Início (iOS 16.4 ou mais
-        recente). Ativar no Safari e no app instalado pode exigir configurações
-        independentes. A entrega com o app fechado depende do Web Push e não é
-        um alarme garantido.
-      </small>
+      {settings && (
+        <small>
+          No iPhone, use o app adicionado à Tela de Início (iOS 16.4 ou mais
+          recente). Ativar no Safari e no app instalado pode exigir
+          configurações independentes. A entrega com o app fechado depende do
+          Web Push e não é um alarme garantido.
+        </small>
+      )}
     </section>
   );
 }

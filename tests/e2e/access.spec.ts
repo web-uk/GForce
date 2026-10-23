@@ -97,13 +97,15 @@ test("atualização disponível antes do login mantém dados e tela de senha ún
   await expect(
     page.getByRole("button", { name: "Atualizar agora" }),
   ).toBeEnabled();
-  await page.getByRole("button", { name: "Atualizar agora" }).click();
+  // A query simula uma versão nova; ao reabrir, o registro canônico pode
+  // oferecer outra atualização. Verificar a recarga real, não ausência do botão.
+  await Promise.all([
+    page.waitForEvent("load"),
+    page.getByRole("button", { name: "Atualizar agora" }).click(),
+  ]);
   await expect(
     page.getByRole("heading", { name: "Bem-vinda de volta." }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Atualizar agora" }),
-  ).toHaveCount(0);
   await expect(page.locator('input[type="password"]')).toHaveCount(1);
   expect((await getData(page)).profile).toEqual(before.profile);
 });
