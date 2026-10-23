@@ -421,3 +421,40 @@ test("timer usa timestamps e não avança etapas ao suspender", async ({
     page.getByText("A tela ficou em segundo plano.", { exact: false }),
   ).toBeVisible();
 });
+
+test("retomada após pausa mantém repetições reduzidas nas próximas sessões", async ({ page }) => {
+  await setup(page);
+  await go(page, "configuracoes");
+  const data = await getData(page);
+  const date = new Date();
+  date.setDate(date.getDate() - 20);
+  const previousDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  data.reps = 12;
+  data.sessions = [{
+    id: "before-break", planId: "before-break", date: previousDate,
+    kind: "A", started: 1, ended: 2, partial: false, steps: 14,
+    effort: "Moderado", pain: false, readiness: "Disposta",
+    reps: 12, resistance: "Peso corporal", notes: "",
+  }];
+  await page.getByLabel("Restaurar backup").setInputFiles({
+    name: "retomada.json", mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(data)),
+  });
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "Confirmar substituição" }).click();
+  await expect(page.getByRole("heading", { name: /Vamos juntas/ })).toBeVisible();
+  await page.getByRole("button", { name: "Iniciar treino", exact: true }).click();
+  await expect(page.getByText("Retomada gradual após pausa:", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Confirmar e iniciar" }).click();
+  await expect(page.getByRole("heading", { name: "Prepare seu espaço" })).toBeVisible();
+  const resumed = await getData(page);
+  expect(resumed.reps).toBe(5);
+  expect((resumed.active as Record<string, unknown>).reps).toBe(5);
+  expect((resumed.active as Record<string, unknown>).short).toBe(true);
+  await page.getByRole("button", { name: "Encerrar e registrar parcial" }).click();
+  await page.getByRole("button", { name: "Salvar registro parcial" }).click();
+  await expect(page.getByRole("heading", { name: "Evolução." })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Atual: 5 repetições", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Confirmar +1 repetição" })).toHaveCount(0);
+});

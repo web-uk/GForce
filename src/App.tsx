@@ -453,14 +453,16 @@ export default function App() {
       readiness === "Cansada" ||
       gap >= 14 ||
       data.profile!.minutes < 10;
+    const startingReps = gap >= 14 ? Math.min(5, data.reps) : data.reps;
     const st = stepsFor(
       startItem.kind,
       isShort,
-      data.reps,
+      startingReps,
       data.profile!.equipment.includes("Cargas leves"),
     );
     await save({
       ...data,
+      reps: startingReps,
       active: {
         id: crypto.randomUUID(),
         planId: startItem.id,
@@ -471,7 +473,7 @@ export default function App() {
         deadline: null,
         started: Date.now(),
         readiness,
-        reps: gap >= 14 ? Math.min(5, data.reps) : data.reps,
+        reps: startingReps,
         easy: readiness === "Cansada",
       },
     });
