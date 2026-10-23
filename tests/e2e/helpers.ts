@@ -42,3 +42,50 @@ export async function getData(page: Page) {
     });
   });
 }
+
+// Mantém a URL da versão simulada nas próximas aberturas; assim o teste não
+// cria uma segunda atualização artificial ao voltar ao endereço canônico.
+export async function queueUpdate(page: Page, workerUrl: string) {
+  await page.addInitScript((url) => {
+    sessionStorage.setItem(
+      "test-update-openings",
+      String(Number(sessionStorage.getItem("test-update-openings") || 0) + 1),
+    );
+    const register = navigator.serviceWorker.register.bind(
+      navigator.serviceWorker,
+    );
+    navigator.serviceWorker.register = (script, options) =>
+      register(
+        String(script).includes("/GForce/sw.js") ? url : script,
+        options,
+      );
+  }, workerUrl);
+  await page.evaluate(async (url) => {
+    sessionStorage.setItem("test-update-openings", "0");
+    const r = await navigator.serviceWorker.register(url, {
+      updateViaCache: "none",
+    });
+    await new Promise<void>((resolve) => {
+      if (r.waiting) return resolve();
+      const worker = r.installing;
+      if (!worker || worker.state === "installed") return resolve();
+      worker.addEventListener("statechange", () => {
+        if (worker.state === "installed") resolve();
+      });
+    });
+  }, workerUrl);
+}
+
+export async function expectAutomaticReload(page: Page) {
+  await expect
+    .poll(async () => {
+      try {
+        return await page.evaluate(() =>
+          Number(sessionStorage.getItem("test-update-openings")),
+        );
+      } catch {
+        return 0;
+      } // O contexto anterior desaparece durante a recarga automática.
+    })
+    .toBeGreaterThanOrEqual(2);
+}

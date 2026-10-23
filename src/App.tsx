@@ -37,7 +37,6 @@ import {
   sittingSource,
 } from "./content/exercises";
 import { Gate } from "./components/Gate";
-import { AppUpdate } from "./components/AppUpdate";
 import { ProfileForm } from "./components/ProfileForm";
 import { ExerciseDetail } from "./components/ExerciseDetail";
 import { Workout } from "./components/Workout";
@@ -79,7 +78,6 @@ export default function App() {
   const [reset, setReset] = useState(false);
   const [resetText, setResetText] = useState("");
   const [resetPassword, setResetPassword] = useState("");
-  const [update, setUpdate] = useState<ServiceWorkerRegistration | null>(null);
   useEffect(() => {
     void readData()
       .then(async (d) => {
@@ -120,17 +118,13 @@ export default function App() {
       window.scrollTo(0, 0);
     };
     const net = () => setOnline(navigator.onLine);
-    const upd = (e: Event) =>
-      setUpdate((e as CustomEvent<ServiceWorkerRegistration>).detail);
     window.addEventListener("hashchange", hash);
     window.addEventListener("online", net);
     window.addEventListener("offline", net);
-    window.addEventListener("gforce-update", upd);
     return () => {
       window.removeEventListener("hashchange", hash);
       window.removeEventListener("online", net);
       window.removeEventListener("offline", net);
-      window.removeEventListener("gforce-update", upd);
     };
   }, []);
   useEffect(() => {
@@ -282,8 +276,6 @@ export default function App() {
       <>
         <Gate
           configured={configured}
-          update={update}
-          updateBlocked={!data || !!data.active}
           onOpen={() => {
             setOpen(true);
             setConfigured(true);
@@ -454,7 +446,6 @@ export default function App() {
               {message}
             </p>
           )}
-          <AppUpdate registration={update} blocked={!!data.active} />
           {!data.active && route !== "configuracoes" && <Notifications />}
           {!data.profile || editProfile ? (
             <section className="panel profile">

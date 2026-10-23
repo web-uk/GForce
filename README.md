@@ -47,7 +47,7 @@ Playwright inicia o preview automaticamente quando necessário. Os projetos Chro
 - Progressão conservadora confirmada, manutenção, redução e retomada após interrupção.
 - Refeições e lista de compras editáveis, sem prescrição de dieta ou estimativa de calorias queimadas.
 - IndexedDB versionado, backup JSON validado com resumo antes de restaurar e exclusão confirmada.
-- Manifest, ícones, service worker, instruções offline, atualização explícita fora do treino e base `/GForce/` com hash routing.
+- Manifest, ícones, service worker, instruções offline, atualização automática ao abrir, fora do treino e base `/GForce/` com hash routing.
 
 ## Backup, senha e iPhone
 
@@ -89,4 +89,6 @@ npm run test:area -- access pwa
 
 Áreas independentes: `access`, `profile`, `workout`, `calendar`, `progress`, `data`, `library`, `nutrition`, `notifications`, `pwa`, `layout` e `accessibility`. É possível combinar várias no mesmo comando, compartilhando um único build de teste. O executor seleciona os testes unitários relacionados, roda os respectivos arquivos Playwright nos dois tamanhos e recompõe o build de produção ao final, verificando a ausência da credencial fictícia. Requer Chromium do Playwright instalado; não instala navegadores a cada execução. `npm test` e `npm run test:e2e` continuam disponíveis para a regressão completa de publicação no CI.
 
-Se uma instalação antiga ainda mostrar “Criar senha”, feche e reabra o app com internet e recarregue o endereço no Safari. Não limpe os dados do site. Nas versões atuais, o botão **Atualizar agora** também aparece antes do login quando uma atualização estiver disponível; ele preserva os registros e fica indisponível enquanto houver sessão em andamento.
+As atualizações são verificadas automaticamente ao abrir ou voltar ao app, sem aviso ou botão. Se houver treino em andamento, formulário com alterações ainda não salvas ou falha no armazenamento, a troca espera uma abertura segura. Sem internet, o app instalado continua funcionando com a versão disponível; uma versão que termine de baixar após a janela inicial fica para a próxima abertura. Não limpe os dados do site para atualizar.
+
+Na transição de uma instalação que ainda executa a versão antiga com botão, pode ser necessário aplicar essa última atualização ou fechar todas as janelas do GForce e reabrir com internet. Depois que esta versão estiver instalada, as próximas atualizações usam o fluxo automático.

@@ -1,17 +1,12 @@
 import { useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { unlock } from "../lib/auth";
-import { AppUpdate } from "./AppUpdate";
 export function Gate({
   configured,
   onOpen,
   onReset,
-  update,
-  updateBlocked,
 }: {
   configured: boolean;
-  update: ServiceWorkerRegistration | null;
-  updateBlocked: boolean;
   onOpen: () => void;
   onReset: () => void;
 }) {
@@ -78,7 +73,6 @@ export function Gate({
             Reinicializar dados deste navegador
           </button>
         )}
-        <AppUpdate registration={update} blocked={updateBlocked} />
         <small>
           Controle de acesso neste aparelho. O site é público e seus registros
           ficam neste navegador. A senha não criptografa os registros.

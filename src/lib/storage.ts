@@ -36,6 +36,7 @@ export async function writeData(data: Data) {
     t.objectStore("records").put(data, "personal");
     t.oncomplete = () => {
       db.close();
+      window.dispatchEvent(new Event("gforce-data-saved"));
       resolve();
     };
     t.onerror = () => reject(t.error);

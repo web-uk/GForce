@@ -10,7 +10,7 @@ const areas = {
   library: { unit: [], e2e: ["library"] },
   nutrition: { unit: [], e2e: ["nutrition"] },
   notifications: { unit: ["messages", "reminders"], e2e: ["notifications"] },
-  pwa: { unit: [], e2e: ["pwa"] },
+  pwa: { unit: ["app-updates"], e2e: ["pwa"] },
   layout: { unit: [], e2e: ["layout"] },
   accessibility: { unit: [], e2e: ["accessibility"] },
 };

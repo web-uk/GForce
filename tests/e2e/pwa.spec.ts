@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { setup, go, getData } from "./helpers";
+import {
+  setup,
+  go,
+  getData,
+  queueUpdate,
+  expectAutomaticReload,
+} from "./helpers";
 test("offline e dados preservados após atualização", async ({
   page,
   context,
@@ -35,7 +41,7 @@ test("offline e dados preservados após atualização", async ({
   await page.reload();
   expect((await getData(page)).meals).toBe("Arroz, feijão e legumes");
 });
-test("nova versão do service worker aguarda fim da sessão e preserva registros", async ({
+test("atualização automática aguarda próxima abertura sem treino e preserva registros", async ({
   page,
 }) => {
   await setup(page);
@@ -50,20 +56,35 @@ test("nova versão do service worker aguarda fim da sessão e preserva registros
   await expect(
     page.getByRole("heading", { name: "Prepare seu espaço" }),
   ).toBeVisible();
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.register("/GForce/sw.js?test-update=2");
-  });
+  await page.waitForTimeout(3200); // encerra a janela de atualização da abertura atual
+  await queueUpdate(page, "/GForce/sw.js?test-update=3");
+  const activeBefore = (await getData(page)).active;
+  await page.reload(); // reabrir com sessão persistida não aplica a atualização
   await expect(
-    page.getByRole("button", { name: "Conclua o treino para atualizar" }),
-  ).toBeDisabled();
+    page.getByRole("heading", { name: "Prepare seu espaço" }),
+  ).toBeVisible();
+  expect((await getData(page)).active).toEqual(activeBefore);
+  expect(
+    await page.evaluate(
+      async () =>
+        !!(await navigator.serviceWorker.getRegistration("/GForce/"))?.waiting,
+    ),
+  ).toBe(true);
+  await expect(
+    page.getByRole("button", {
+      name: /Atualizar agora|Conclua o treino para atualizar/,
+    }),
+  ).toHaveCount(0);
   await page
     .getByRole("button", { name: "Encerrar e registrar parcial" })
     .click();
   await page.getByRole("button", { name: "Salvar registro parcial" }).click();
-  await expect(
-    page.getByRole("button", { name: "Atualizar agora" }),
-  ).toBeEnabled();
-  await page.getByRole("button", { name: "Atualizar agora" }).click();
+  await expect(page.getByRole("heading", { name: "Evolução." })).toBeVisible();
+  await page.evaluate(() =>
+    sessionStorage.setItem("test-update-openings", "0"),
+  );
+  await page.reload(); // próxima abertura segura aplica sem pedir confirmação
+  await expectAutomaticReload(page);
   await expect(page.getByRole("heading", { name: "Evolução." })).toBeVisible();
   expect(((await getData(page)).sessions as unknown[]).length).toBe(1);
 });

@@ -1,6 +1,13 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { setup, go, getData, testPassword } from "./helpers";
+import {
+  setup,
+  go,
+  getData,
+  testPassword,
+  queueUpdate,
+  expectAutomaticReload,
+} from "./helpers";
 
 test("boas-vindas com uma senha já definida, teclado e acesso lembrado", async ({
   page,
@@ -75,7 +82,7 @@ test("bloqueio manual exige a senha única e preserva o perfil", async ({
   ).toBeVisible();
 });
 
-test("atualização disponível antes do login mantém dados e tela de senha única", async ({
+test("atualização automática antes do login preserva dados e bloqueio", async ({
   page,
 }) => {
   await setup(page);
@@ -89,23 +96,18 @@ test("atualização disponível antes do login mantém dados e tela de senha ún
     .getByRole("button", { name: "Bloquear agora", exact: true })
     .last()
     .click();
-  await page.evaluate(async () => {
-    await navigator.serviceWorker.register("/GForce/sw.js?access-update=2", {
-      updateViaCache: "none",
-    });
-  });
-  await expect(
-    page.getByRole("button", { name: "Atualizar agora" }),
-  ).toBeEnabled();
-  // A query simula uma versão nova; ao reabrir, o registro canônico pode
-  // oferecer outra atualização. Verificar a recarga real, não ausência do botão.
-  await Promise.all([
-    page.waitForEvent("load"),
-    page.getByRole("button", { name: "Atualizar agora" }).click(),
-  ]);
+  await page.waitForTimeout(3200); // a atualização chegou depois da abertura
+  await queueUpdate(page, "/GForce/sw.js?access-update=3");
+  await page.reload();
+  await expectAutomaticReload(page);
   await expect(
     page.getByRole("heading", { name: "Bem-vinda de volta." }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: /Atualizar agora|Conclua o treino para atualizar/,
+    }),
+  ).toHaveCount(0);
   await expect(page.locator('input[type="password"]')).toHaveCount(1);
   expect((await getData(page)).profile).toEqual(before.profile);
 });
