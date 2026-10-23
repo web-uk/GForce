@@ -5,6 +5,7 @@ export default defineConfig({
   workers: 1,
   timeout: 45000,
   use: {
+    channel: process.env.GFORCE_BROWSER_CHANNEL || undefined,
     baseURL: "http://127.0.0.1:4173/GForce/",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",

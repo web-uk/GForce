@@ -6,7 +6,9 @@ const out = "test-results/published";
 const testPassword = process.env.GFORCE_TEST_PASSWORD;
 
 await mkdir(out, { recursive: true });
-const browser = await chromium.launch();
+const browser = await chromium.launch({
+  channel: process.env.GFORCE_BROWSER_CHANNEL || undefined,
+});
 const context = await browser.newContext({
   viewport: { width: 390, height: 844 },
   locale: "pt-BR",

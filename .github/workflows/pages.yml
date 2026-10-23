@@ -4,14 +4,17 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+env:
+  GFORCE_BROWSER_CHANNEL: chrome
 permissions:
   contents: read
 concurrency:
   group: pages-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,7 +29,8 @@ jobs:
         env:
           GFORCE_TEST_BUILD: "1"
           VITE_ONESIGNAL_APP_ID: "00000000-0000-4000-8000-000000000001"
-      - run: npx playwright install --with-deps chromium
+      - name: Usar Chrome estável já instalado no runner
+        run: google-chrome --version
       - run: npm run test:e2e
       - name: Build de produção sem credencial de teste
         run: npm run build && node scripts/check-production-verifier.mjs
@@ -49,7 +53,7 @@ jobs:
     needs: validate
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pages: write
       id-token: write
@@ -64,7 +68,8 @@ jobs:
         id: deployment
   verify-published:
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -72,7 +77,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - name: Usar Chrome estável já instalado no runner
+        run: google-chrome --version
       - name: Open published URL and verify real app
         run: node tests/published-smoke.mjs
         env:

@@ -57,3 +57,5 @@ Lint, tipos, build e **20 testes unitários** passaram localmente nesta atualiza
 Não houve teste físico em iPhone. Os horários dependem do provedor, navegador, modo Foco e agenda do GitHub; são convites aproximados, não alarmes garantidos.
 
 O build de produção contém dez entradas de precache e passou pela checagem explícita do verificador real e ausência da fixture. A busca nos arquivos do projeto não encontrou a senha real em texto. Capturas do convite após login foram inspecionadas visualmente em 390 × 844 e 1440 × 900.
+
+O instalador de Chromium ficou retido na preparação do runner após o push. O workflow foi ajustado para o Chrome estável pré-instalado na imagem Ubuntu 24.04, mantendo os mesmos testes Playwright e limitando a duração do job. Localmente, continua disponível Chromium baixado por Playwright. A execução substituída foi cancelada pela regra de concorrência; o deploy só ocorre após a nova validação completa.
