@@ -37,6 +37,8 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: validate
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -50,3 +52,23 @@ jobs:
           enablement: true
       - uses: actions/deploy-pages@v4
         id: deployment
+  verify-published:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Open published URL and verify real app
+        run: node tests/published-smoke.mjs
+        env:
+          GFORCE_URL: ${{ needs.deploy.outputs.page_url }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-browser-evidence
+          path: test-results/published/

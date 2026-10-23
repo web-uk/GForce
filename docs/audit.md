@@ -36,4 +36,8 @@ Evidências visuais: [Hoje desktop](evidence/hoje-1440x900.png), [Hoje celular](
 
 Repositório público e branch `main` preservados. Branch sem proteção detectada; nenhuma proteção foi alterada. A tentativa de habilitar Pages pelo token da integração recebeu `403 Resource not accessible by integration`; a usuária confirmou a seleção de GitHub Actions em Settings → Pages. Consulta posterior confirmou `build_type: workflow` e URL `https://web-uk.github.io/GForce/`.
 
-Workflow e abertura da URL serão registrados aqui após o primeiro deploy verificado. Até então esta seção não afirma que o aplicativo está publicado.
+O [primeiro workflow](https://github.com/web-uk/GForce/actions/runs/40028612358) concluiu **validate e deploy com sucesso** em 23/10/2026 às 21:43 UTC, publicando o commit `d47a77dc354d63af6cecc1edd2e54d2ac3a5dc9a` no Pages. A configuração retornou a URL real **https://web-uk.github.io/GForce/**.
+
+A abertura externa no navegador local encontrou erro de confiança da CA do proxy (`ERR_CERT_AUTHORITY_INVALID`); não foi desativada a verificação TLS. Em seguida, o ambiente local ficou indisponível. Para concluir a checagem independente, o workflow inclui o job **verify-published**, que abre a URL real com Chromium no runner do GitHub, verifica HTTP 200, título, assets sem erros, criação de senha e perfil sintético, início e persistência do treino, manifest e reload offline. As capturas de 390 × 844 e 1440 × 900 e o `report.json` são publicados como artifact **published-browser-evidence**. O estado final desse job é verificável na aba Actions, sem confundir testes locais com teste do endereço publicado.
+
+A ausência de teste físico em iPhone e de revisão clínica permanece. O ambiente local indisponível não afetou o código, os commits nem as evidências já enviados ao repositório.
